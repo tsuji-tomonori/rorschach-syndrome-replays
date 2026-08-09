@@ -13,7 +13,7 @@ npx serve dist
 
 ## コンテンツ更新
 
-\`content/*.md\` を更新して \`main\` に反映すると、GitHub Actionsが静的HTMLを生成し、GitHub Pagesへ自動デプロイします。
+`content/*.md` を更新して `main` に反映すると、GitHub Actionsが静的HTMLを生成し、GitHub Pagesへ自動デプロイします。
 
 ## 収録作品
 
