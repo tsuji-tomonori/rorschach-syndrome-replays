@@ -1,0 +1,13 @@
+{
+  "name": "rorschach-syndrome-replays",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/check.mjs"
+  },
+  "dependencies": {
+    "marked": "15.0.12"
+  }
+}
