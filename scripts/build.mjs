@@ -102,7 +102,9 @@ function renderMarkdown(markdown) {
         const inner = this.parser.parseInline(tokens);
         const plain = stripInline(tokens.map((token) => token.raw || token.text || "").join(""));
         const id = slugify(plain, seen);
-        if (depth >= 2 && depth <= 3 && plain !== "照合記録") toc.push({ depth, text: plain, id });
+        const isChapter = /^(?:第[一二三四五六七八九十百0-9]+章|序章|終章|エピローグ)/.test(plain);
+        const isSubscene = depth === 3 && plain !== "登場人物" && plain !== "照合記録";
+        if ((depth === 2 && isChapter) || isSubscene) toc.push({ depth, text: plain, id });
         return "<h" + depth + ' id="' + id + '">' + inner
           + '<a class="heading-anchor" href="#' + id + '" aria-label="'
           + escapeHtml(plain) + 'へのリンク">#</a></h' + depth + ">";
@@ -232,7 +234,7 @@ fs.mkdirSync(path.join(out, "assets"), { recursive: true });
 fs.writeFileSync(path.join(out, "index.html"), homePage());
 for (const [index, work] of works.entries()) {
   const markdown = fs.readFileSync(path.join(root, "content", work.file), "utf8");
-  const publicMarkdown = markdown.replace(/\n## 照合記録[\s\S]*$/, "");
+  const publicMarkdown = markdown.replace(/\n#{2,6} 照合記録[\s\S]*$/, "");
   const rendered = renderMarkdown(publicMarkdown);
   const directory = path.join(out, "replays", work.slug);
   fs.mkdirSync(directory, { recursive: true });

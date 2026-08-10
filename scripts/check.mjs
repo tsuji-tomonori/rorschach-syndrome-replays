@@ -5,6 +5,15 @@ const root = process.cwd();
 const slugs = ["kikaken", "yukiyama", "ririkaza", "ayumiya", "miratoto", "rumufo", "fukeizai"];
 const failures = [];
 const pages = ["dist/index.html", ...slugs.map((slug) => "dist/replays/" + slug + "/index.html")];
+const chapterHeading = /^(?:第[一二三四五六七八九十百0-9]+章|序章|終章|エピローグ)/;
+
+for (const slug of slugs) {
+  const markdownPath = path.join(root, "content", slug + ".md");
+  const markdown = fs.readFileSync(markdownPath, "utf8");
+  for (const match of markdown.matchAll(/^## (.+)$/gm)) {
+    if (!chapterHeading.test(match[1])) failures.push("content/" + slug + ".md: non-chapter ## heading: " + match[1]);
+  }
+}
 
 for (const file of pages) {
   const absolute = path.join(root, file);
