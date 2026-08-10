@@ -102,9 +102,9 @@ function renderMarkdown(markdown) {
         const inner = this.parser.parseInline(tokens);
         const plain = stripInline(tokens.map((token) => token.raw || token.text || "").join(""));
         const id = slugify(plain, seen);
-        const isChapter = /^(?:第[一二三四五六七八九十百0-9]+章|序章|終章|エピローグ)/.test(plain);
-        const isSubscene = depth === 3 && plain !== "登場人物" && plain !== "照合記録";
-        if ((depth === 2 && isChapter) || isSubscene) toc.push({ depth, text: plain, id });
+        const isChapter = /^(?:第[一二三四五六七八九十百0-9]+章|序章|終章|エピローグ)$/.test(plain);
+        const isCast = depth === 3 && plain === "登場人物";
+        if ((depth === 2 && isChapter) || isCast) toc.push({ depth, text: plain, id });
         return "<h" + depth + ' id="' + id + '">' + inner
           + '<a class="heading-anchor" href="#' + id + '" aria-label="'
           + escapeHtml(plain) + 'へのリンク">#</a></h' + depth + ">";

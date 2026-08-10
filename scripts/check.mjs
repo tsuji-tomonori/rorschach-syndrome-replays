@@ -5,13 +5,18 @@ const root = process.cwd();
 const slugs = ["kikaken", "yukiyama", "ririkaza", "ayumiya", "miratoto", "rumufo", "fukeizai"];
 const failures = [];
 const pages = ["dist/index.html", ...slugs.map((slug) => "dist/replays/" + slug + "/index.html")];
-const chapterHeading = /^(?:第[一二三四五六七八九十百0-9]+章|序章|終章|エピローグ)/;
+const chapterHeading = /^(?:第[一二三四五六七八九十百0-9]+章|序章|終章|エピローグ)$/;
 
 for (const slug of slugs) {
   const markdownPath = path.join(root, "content", slug + ".md");
   const markdown = fs.readFileSync(markdownPath, "utf8");
   for (const match of markdown.matchAll(/^## (.+)$/gm)) {
     if (!chapterHeading.test(match[1])) failures.push("content/" + slug + ".md: non-chapter ## heading: " + match[1]);
+  }
+  for (const match of markdown.matchAll(/^### (.+)$/gm)) {
+    if (match[1] !== "登場人物" && match[1] !== "照合記録") {
+      failures.push("content/" + slug + ".md: spoiler-prone subheading: " + match[1]);
+    }
   }
 }
 
