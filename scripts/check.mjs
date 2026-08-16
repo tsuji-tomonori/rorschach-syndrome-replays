@@ -30,9 +30,9 @@ for (const file of pages) {
   for (const required of ["<!doctype html>", 'lang="ja"', 'id="main"']) {
     if (!html.includes(required)) failures.push(file + ": " + required + " missing");
   }
-  if (!html.includes("/rorschach-syndrome-replays/assets/styles.css")) failures.push(file + ": stylesheet missing");
-  if (!html.includes("/rorschach-syndrome-replays/assets/app.js")) failures.push(file + ": script missing");
-  if (/href="\/replays\//.test(html)) failures.push(file + ": base-path-unsafe link");
+  if (!html.includes("/assets/styles.css")) failures.push(file + ": stylesheet missing");
+  if (!html.includes("/assets/app.js")) failures.push(file + ": script missing");
+  if (html.includes("/rorschach-syndrome-replays/")) failures.push(file + ": obsolete repository base path");
 }
 for (const asset of ["dist/assets/styles.css", "dist/assets/app.js", "dist/.nojekyll"]) {
   if (!fs.existsSync(path.join(root, asset))) failures.push(asset + ": missing");
