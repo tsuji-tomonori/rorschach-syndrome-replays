@@ -4,7 +4,7 @@ import { Marked } from "marked";
 
 const root = process.cwd();
 const out = path.join(root, "dist");
-const base = "/rorschach-syndrome-replays/";
+const base = "/";
 
 const works = [
   {
