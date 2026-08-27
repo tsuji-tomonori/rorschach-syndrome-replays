@@ -2,11 +2,11 @@
 
 [![Deploy GitHub Pages](https://github.com/tsuji-tomonori/rorschach-syndrome-replays/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/tsuji-tomonori/rorschach-syndrome-replays/actions/workflows/deploy-pages.yml)
 
-エモクロアTRPG『ロールシャッハシンドローム』のセッションから構成した、7作品のリプレイ小説を読むための静的サイトです。
+エモクロアTRPG『ロールシャッハシンドローム』のセッションから構成した、9作品のリプレイ小説を読むための静的サイトです。
 
 ## 公開サイト
 
-https://tsuji-tomonori.github.io/rorschach-syndrome-replays/
+https://rorschach.page.diopside.net/
 
 ## ローカル確認
 
@@ -30,5 +30,7 @@ npx serve dist
 - みらととシャッハ
 - るむふぉシャッハ
 - フ景罪シャッハ
+- えりぶりシャッハ
+- えくれあシャッハ
 
 原作シナリオ：ディズム『ロールシャッハシンドローム』
