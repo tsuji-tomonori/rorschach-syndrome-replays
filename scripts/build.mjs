@@ -139,6 +139,12 @@ function renderMarkdown(markdown) {
 }
 
 function shell(options) {
+  const notice = [
+    '<aside class="site-notice" aria-label="作品についての注意">',
+    '  <p><strong>AI制作</strong><span>本サイトのリプレイ小説と文章構成は、配信内容をもとに生成AIを用いて制作しています。</span></p>',
+    '  <p><strong>ネタバレ注意</strong><span>原作シナリオ『ロールシャッハシンドローム』の重大なネタバレを含みます。</span></p>',
+    '</aside>'
+  ].join("\n");
   return [
     "<!doctype html>",
     '<html lang="ja" data-theme="paper">',
@@ -156,6 +162,7 @@ function shell(options) {
     "</head>",
     '<body class="' + (options.pageClass || "") + '" style="--accent:' + (options.accent || "#a43d4b") + '">',
     '  <a class="skip-link" href="#main">本文へ移動</a>',
+    notice,
     options.body,
     '  <script src="' + base + 'assets/app.js" defer></script>',
     "</body>",
@@ -203,7 +210,7 @@ function homePage() {
   ].join("\n");
   return shell({
     title: "ロールシャッハ・シンドローム｜リプレイ小説集",
-    description: "エモクロアTRPG『ロールシャッハシンドローム』から生まれた九つのリプレイ小説。",
+    description: "配信内容をもとに生成AIを用いて制作した、エモクロアTRPG『ロールシャッハシンドローム』のリプレイ小説集。原作シナリオのネタバレを含みます。",
     body,
     pageClass: "home"
   });
@@ -238,7 +245,7 @@ function readerPage(work, index, rendered) {
   ].join("\n");
   return shell({
     title: work.label + "｜ロールシャッハ・シンドローム",
-    description: work.lead,
+    description: work.lead + " 生成AIを用いて制作した作品で、原作シナリオのネタバレを含みます。",
     body,
     pageClass: "reader",
     accent: work.accent

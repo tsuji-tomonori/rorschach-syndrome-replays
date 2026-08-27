@@ -33,6 +33,12 @@ for (const file of pages) {
   if (!html.includes("/assets/styles.css")) failures.push(file + ": stylesheet missing");
   if (!html.includes("/assets/app.js")) failures.push(file + ": script missing");
   if (html.includes("/rorschach-syndrome-replays/")) failures.push(file + ": obsolete repository base path");
+  if (!html.includes('class="site-notice"')) failures.push(file + ": site notice missing");
+  if (!html.includes("生成AIを用いて制作")) failures.push(file + ": AI disclosure missing");
+  if (!html.includes("ネタバレ注意")) failures.push(file + ": spoiler warning missing");
+  const description = html.match(/<meta name="description" content="([^"]+)">/)?.[1] || "";
+  if (!description.includes("生成AI")) failures.push(file + ": AI disclosure missing from description");
+  if (!description.includes("ネタバレ")) failures.push(file + ": spoiler warning missing from description");
 }
 for (const asset of ["dist/assets/styles.css", "dist/assets/app.js", "dist/.nojekyll"]) {
   if (!fs.existsSync(path.join(root, asset))) failures.push(asset + ": missing");
