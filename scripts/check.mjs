@@ -1,16 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
+import { loadWorkMarkdown } from "./content.mjs";
 import { works } from "./works.mjs";
 
 const root = process.cwd();
-const slugs = works.map((work) => work.slug);
 const failures = [];
+const slugs = works.map((work) => work.slug);
 const pages = [
   "dist/index.html",
-  ...slugs.map((slug) => "dist/replays/" + slug + "/index.html"),
-  ...slugs.map((slug) => "dist/replays/" + slug + "/dialogue/index.html")
+  ...slugs.map((slug) => "dist/replays/" + slug + "/index.html")
 ];
-const chapterHeading = /^(?:第[一二三四五六七八九十百0-9]+章|序章|終章|エピローグ)$/;
+const chapterHeading = /^(?:第[一二三四五六七八九十百0-9]+章|序章|終章|エピローグ)$/u;
 const neutralCardDescription = "配信セッションをもとに構成したリプレイ小説。";
 const spoilerPronePromotionalPhrases = [
   "繰り返す一日",
@@ -24,6 +24,28 @@ const spoilerPronePromotionalPhrases = [
   "反復の核心",
   "命を預ける"
 ];
+const expectedOverlays = {
+  ayumiya: { "03.md": "第三章", "04.md": "第四章", "05.md": "第五章" },
+  eclaire: {
+    "01.md": "第一章", "02.md": "第二章", "03.md": "第三章",
+    "04.md": "第四章", "05.md": "第五章", "06.md": "エピローグ"
+  },
+  eriburi: {
+    "01.md": "第一章", "02.md": "第二章", "03.md": "第三章",
+    "04.md": "第四章", "05.md": "エピローグ"
+  },
+  fukeizai: {
+    "01.md": "第一章", "02.md": "第二章", "03.md": "第三章",
+    "04.md": "第四章", "05.md": "第五章"
+  },
+  miratoto: { "03.md": "第三章", "04.md": "第四章", "05.md": "第五章" },
+  ririkaza: { "05.md": "第五章" },
+  rumufo: {
+    "01.md": "第一章", "02.md": "第二章", "03.md": "第三章",
+    "04.md": "第四章", "05.md": "第五章"
+  },
+  yukiyama: { "05.md": "第五章" }
+};
 
 function formatTimestamp(totalSeconds) {
   const hours = Math.floor(totalSeconds / 3600);
@@ -34,39 +56,174 @@ function formatTimestamp(totalSeconds) {
     : minutes + ":" + String(seconds).padStart(2, "0");
 }
 
+function extractChapter(markdown, title) {
+  const headings = [...markdown.matchAll(/^## (.+)$/gmu)];
+  const index = headings.findIndex((match) => match[1] === title);
+  if (index < 0) return "";
+  const start = headings[index].index;
+  const nextHeading = headings[index + 1]?.index ?? markdown.length;
+  const audit = markdown.indexOf("\n---\n\n### 照合記録", start);
+  const end = audit >= 0 ? Math.min(nextHeading, audit) : nextHeading;
+  return markdown.slice(start, end).trim();
+}
+
+function dialogueCount(markdown) {
+  return [...markdown.matchAll(/^「/gmu)].length;
+}
+
+function listHtmlFiles(directory) {
+  if (!fs.existsSync(directory)) return [];
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = path.join(directory, entry.name);
+    return entry.isDirectory() ? listHtmlFiles(entryPath) : [entryPath];
+  }).filter((file) => file.endsWith(".html"));
+}
+
+let overlayCount = 0;
+
 for (const work of works) {
   const { slug } = work;
-  const markdownPath = path.join(root, "content", slug + ".md");
-  const markdown = fs.readFileSync(markdownPath, "utf8");
-  let chapterCount = 0;
-  for (const match of markdown.matchAll(/^## (.+)$/gm)) {
-    if (!chapterHeading.test(match[1])) failures.push("content/" + slug + ".md: non-chapter ## heading: " + match[1]);
-    else chapterCount += 1;
+  const basePath = path.join(root, "content", work.file);
+  const baseMarkdown = fs.readFileSync(basePath, "utf8");
+  const markdown = loadWorkMarkdown(root, work);
+  const headings = [...markdown.matchAll(/^## (.+)$/gmu)].map((match) => match[1]);
+
+  if (headings.join("\n") !== Object.keys(work.chapterStarts).join("\n")) {
+    failures.push("content/" + work.file + ": chapter headings do not match timestamp metadata");
   }
-  for (const match of markdown.matchAll(/^### (.+)$/gm)) {
-    if (match[1] !== "登場人物" && match[1] !== "照合記録") {
-      failures.push("content/" + slug + ".md: spoiler-prone subheading: " + match[1]);
+  for (const heading of headings) {
+    if (!chapterHeading.test(heading)) {
+      failures.push("content/" + work.file + ": non-chapter ## heading: " + heading);
     }
   }
-  const htmlPath = path.join(root, "dist/replays", slug, "index.html");
+  for (const match of markdown.matchAll(/^### (.+)$/gmu)) {
+    if (match[1] !== "登場人物" && match[1] !== "照合記録") {
+      failures.push("content/" + work.file + ": spoiler-prone subheading: " + match[1]);
+    }
+  }
+  if (/詳細会話記録|reading-mode-switch|dialogue-record|session-speech:start|セリフ統合検査/u.test(markdown)) {
+    failures.push("content/" + work.file + ": obsolete transcript or generated-weave content remains");
+  }
+
+  const overlayDirectory = path.join(root, "content", "chapters", slug);
+  const expected = expectedOverlays[slug] || {};
+  const actualFiles = fs.existsSync(overlayDirectory)
+    ? fs.readdirSync(overlayDirectory).filter((file) => file.endsWith(".md")).sort()
+    : [];
+  const expectedFiles = Object.keys(expected).sort();
+  if (actualFiles.join("\n") !== expectedFiles.join("\n")) {
+    failures.push("content/chapters/" + slug + ": overlay files differ from the reviewed set");
+  }
+
+  for (const [file, title] of Object.entries(expected)) {
+    overlayCount += 1;
+    const relative = path.join("content", "chapters", slug, file);
+    const absolute = path.join(root, relative);
+    if (!fs.existsSync(absolute)) {
+      failures.push(relative + ": missing");
+      continue;
+    }
+    const overlay = fs.readFileSync(absolute, "utf8").trim();
+    const overlayHeadings = [...overlay.matchAll(/^## (.+)$/gmu)];
+    if (overlayHeadings.length !== 1 || overlayHeadings[0]?.[1] !== title) {
+      failures.push(relative + ": expected one heading named " + title);
+    }
+    if (/^\[\d{1,2}:\d{2}(?::\d{2})?\]/mu.test(overlay)
+        || /^(?:GM|DL|PL|KP|PC|NPC|進行役|ゲームマスター)[：:]/gmu.test(overlay)) {
+      failures.push(relative + ": transcript formatting leaked into the novel chapter");
+    }
+    if (/詳細会話記録|session-speech:start|セリフ統合検査/u.test(overlay)) {
+      failures.push(relative + ": obsolete transcript or generated-weave marker remains");
+    }
+    const baseChapter = extractChapter(baseMarkdown, title);
+    const assembledChapter = extractChapter(markdown, title);
+    if (!baseChapter) failures.push(relative + ": matching base chapter missing");
+    if (assembledChapter !== overlay) failures.push(relative + ": overlay was not applied exactly");
+    if (dialogueCount(overlay) < dialogueCount(baseChapter) + 3) {
+      failures.push(relative + ": dialogue coverage did not materially increase");
+    }
+  }
+
+  const speechPath = path.join(root, "sources", "session-speech", slug + ".json");
+  if (!fs.existsSync(speechPath)) {
+    failures.push("sources/session-speech/" + slug + ".json: missing");
+    continue;
+  }
+  const speech = JSON.parse(fs.readFileSync(speechPath, "utf8"));
+  const expectedStart = Math.min(...Object.values(work.chapterStarts));
+  if (speech.version !== 1) failures.push("sources/session-speech/" + slug + ".json: unsupported version");
+  if (speech.slug !== slug) failures.push("sources/session-speech/" + slug + ".json: slug mismatch");
+  if (speech.videoId !== work.videoId) failures.push("sources/session-speech/" + slug + ".json: video ID mismatch");
+  if (speech.range?.start !== expectedStart || speech.range?.end !== work.sessionEnd) {
+    failures.push("sources/session-speech/" + slug + ".json: story range mismatch");
+  }
+  if (speech.source?.type !== "youtube-auto-captions"
+      || !/^[a-f0-9]{64}$/.test(speech.source?.sha256 || "")) {
+    failures.push("sources/session-speech/" + slug + ".json: source traceability missing");
+  }
+  const segments = speech.segments || [];
+  if (segments.length !== speech.metrics?.retainedSegments || segments.length < 300) {
+    failures.push("sources/session-speech/" + slug + ".json: retained speech count is unexpectedly low");
+  }
+  const sourceAccounted = (speech.metrics?.outsideStoryRange || 0)
+    + (speech.metrics?.nonSpeechOnly || 0)
+    + (speech.metrics?.exactDuplicates || 0)
+    + segments.length;
+  if (sourceAccounted !== speech.metrics?.sourceSegments) {
+    failures.push("sources/session-speech/" + slug + ".json: source segment accounting mismatch");
+  }
+  for (const [index, segment] of segments.entries()) {
+    if (!Number.isInteger(segment.seconds)
+        || segment.seconds < expectedStart
+        || segment.seconds >= work.sessionEnd) {
+      failures.push("sources/session-speech/" + slug + ".json: segment outside story range at " + index);
+      break;
+    }
+    if (index > 0 && segment.seconds < segments[index - 1].seconds) {
+      failures.push("sources/session-speech/" + slug + ".json: segments are not chronological");
+      break;
+    }
+    if (segment.timestamp !== formatTimestamp(segment.seconds)) {
+      failures.push("sources/session-speech/" + slug + ".json: timestamp mismatch at " + index);
+      break;
+    }
+    if (!segment.text?.trim()
+        || /\[(?:音楽|笑い|拍手|咳|咳払い|鼻息|叫び声|歓声|ため息|息をのむ音|うめき声|無音|効果音)\]/u.test(segment.text)) {
+      failures.push("sources/session-speech/" + slug + ".json: empty or non-speech segment at " + index);
+      break;
+    }
+    if (index > 0 && segment.text === segments[index - 1].text) {
+      failures.push("sources/session-speech/" + slug + ".json: consecutive duplicate at " + index);
+      break;
+    }
+  }
+  const chapterEntries = Object.entries(work.chapterStarts);
+  for (const [index, [title, start]] of chapterEntries.entries()) {
+    const end = chapterEntries[index + 1]?.[1] ?? work.sessionEnd;
+    if (!segments.some((segment) => segment.seconds >= start && segment.seconds < end)) {
+      failures.push("sources/session-speech/" + slug + ".json: no speech retained for " + title);
+    }
+  }
+
+  const htmlPath = path.join(root, "dist", "replays", slug, "index.html");
   if (fs.existsSync(htmlPath)) {
     const html = fs.readFileSync(htmlPath, "utf8");
-    if (!html.includes('class="reading-mode-switch"') || !html.includes("詳細会話記録")) {
-      failures.push("dist/replays/" + slug + "/index.html: dialogue view switch missing");
+    if (/詳細会話記録|reading-mode-switch|dialogue-record|dialogue-segment/u.test(html)) {
+      failures.push("dist/replays/" + slug + "/index.html: obsolete transcript UI remains");
     }
-    const chapterLinks = [...html.matchAll(/class="chapter-video-link"/g)].length;
-    const tocVideoLinks = [...html.matchAll(/class="toc-video-link"/g)].length;
-    if (chapterLinks !== chapterCount) {
-      failures.push("dist/replays/" + slug + "/index.html: expected " + chapterCount
+    const chapterLinks = [...html.matchAll(/class="chapter-video-link"/gu)].length;
+    const tocVideoLinks = [...html.matchAll(/class="toc-video-link"/gu)].length;
+    if (chapterLinks !== headings.length) {
+      failures.push("dist/replays/" + slug + "/index.html: expected " + headings.length
         + " chapter video links, found " + chapterLinks);
     }
-    if (tocVideoLinks !== chapterCount) {
-      failures.push("dist/replays/" + slug + "/index.html: expected " + chapterCount
+    if (tocVideoLinks !== headings.length) {
+      failures.push("dist/replays/" + slug + "/index.html: expected " + headings.length
         + " TOC video links, found " + tocVideoLinks);
     }
-    const readTargets = [...html.matchAll(/<a class="chapter-video-link"[^>]*href="https:\/\/www\.youtube\.com\/watch\?v=([\w-]{11})&amp;t=(\d+)s"/g)]
+    const readTargets = [...html.matchAll(/<a class="chapter-video-link"[^>]*href="https:\/\/www\.youtube\.com\/watch\?v=([\w-]{11})&amp;t=(\d+)s"/gu)]
       .map((match) => match[1] + ":" + match[2]);
-    const tocTargets = [...html.matchAll(/<a class="toc-video-link"[^>]*href="https:\/\/www\.youtube\.com\/watch\?v=([\w-]{11})&amp;t=(\d+)s"/g)]
+    const tocTargets = [...html.matchAll(/<a class="toc-video-link"[^>]*href="https:\/\/www\.youtube\.com\/watch\?v=([\w-]{11})&amp;t=(\d+)s"/gu)]
       .map((match) => match[1] + ":" + match[2]);
     if (readTargets.join(",") !== tocTargets.join(",")) {
       failures.push("dist/replays/" + slug + "/index.html: reader and TOC timestamp links differ");
@@ -75,7 +232,7 @@ for (const work of works) {
     if (startSeconds.some((seconds, index) => index > 0 && seconds <= startSeconds[index - 1])) {
       failures.push("dist/replays/" + slug + "/index.html: chapter timestamps are not chronological");
     }
-    for (const match of html.matchAll(/<a class="(?:chapter-video-link|toc-video-link)"([^>]+)>/g)) {
+    for (const match of html.matchAll(/<a class="(?:chapter-video-link|toc-video-link)"([^>]+)>/gu)) {
       if (!/href="https:\/\/www\.youtube\.com\/watch\?v=[\w-]{11}&amp;t=\d+s"/.test(match[1])) {
         failures.push("dist/replays/" + slug + "/index.html: invalid YouTube timestamp URL");
       }
@@ -84,93 +241,13 @@ for (const work of works) {
       }
     }
   }
+}
 
-  const dialoguePath = path.join(root, "content", "dialogue", slug + ".json");
-  if (!fs.existsSync(dialoguePath)) {
-    failures.push("content/dialogue/" + slug + ".json: missing");
-    continue;
-  }
-  const dialogue = JSON.parse(fs.readFileSync(dialoguePath, "utf8"));
-  const expectedStart = Math.min(...Object.values(work.chapterStarts));
-  if (dialogue.version !== 1) failures.push("content/dialogue/" + slug + ".json: unsupported version");
-  if (dialogue.slug !== slug) failures.push("content/dialogue/" + slug + ".json: slug mismatch");
-  if (dialogue.videoId !== work.videoId) failures.push("content/dialogue/" + slug + ".json: video ID mismatch");
-  if (dialogue.range?.start !== expectedStart || dialogue.range?.end !== work.dialogueEnd) {
-    failures.push("content/dialogue/" + slug + ".json: story range mismatch");
-  }
-  if (dialogue.source?.type !== "youtube-auto-captions"
-      || !/^[a-f0-9]{64}$/.test(dialogue.source?.sha256 || "")) {
-    failures.push("content/dialogue/" + slug + ".json: source traceability missing");
-  }
-  const segments = dialogue.segments || [];
-  if (segments.length !== dialogue.metrics?.retainedSegments || segments.length < 300) {
-    failures.push("content/dialogue/" + slug + ".json: retained dialogue count is unexpectedly low");
-  }
-  const accounted = (dialogue.metrics?.outsideStoryRange || 0)
-    + (dialogue.metrics?.nonSpeechOnly || 0)
-    + (dialogue.metrics?.exactDuplicates || 0)
-    + segments.length;
-  if (accounted !== dialogue.metrics?.sourceSegments) {
-    failures.push("content/dialogue/" + slug + ".json: source segment accounting mismatch");
-  }
-  for (const [index, segment] of segments.entries()) {
-    if (!Number.isInteger(segment.seconds)
-        || segment.seconds < expectedStart
-        || segment.seconds >= work.dialogueEnd) {
-      failures.push("content/dialogue/" + slug + ".json: segment outside story range at " + index);
-      break;
-    }
-    if (index > 0 && segment.seconds < segments[index - 1].seconds) {
-      failures.push("content/dialogue/" + slug + ".json: segments are not chronological");
-      break;
-    }
-    if (segment.timestamp !== formatTimestamp(segment.seconds)) {
-      failures.push("content/dialogue/" + slug + ".json: timestamp mismatch at " + index);
-      break;
-    }
-    if (!segment.text?.trim() || /\[(?:音楽|笑い|拍手|咳|咳払い|鼻息|叫び声|歓声|ため息|息をのむ音|うめき声|無音|効果音)\]/u.test(segment.text)) {
-      failures.push("content/dialogue/" + slug + ".json: empty or non-speech segment at " + index);
-      break;
-    }
-    if (index > 0 && segment.text === segments[index - 1].text) {
-      failures.push("content/dialogue/" + slug + ".json: consecutive duplicate at " + index);
-      break;
-    }
-  }
-  const chapterEntries = Object.entries(work.chapterStarts);
-  for (const [index, [title, start]] of chapterEntries.entries()) {
-    const end = chapterEntries[index + 1]?.[1] ?? work.dialogueEnd;
-    if (!segments.some((segment) => segment.seconds >= start && segment.seconds < end)) {
-      failures.push("content/dialogue/" + slug + ".json: no dialogue retained for " + title);
-    }
-  }
-
-  const dialogueHtmlPath = path.join(root, "dist", "replays", slug, "dialogue", "index.html");
-  if (fs.existsSync(dialogueHtmlPath)) {
-    const dialogueHtml = fs.readFileSync(dialogueHtmlPath, "utf8");
-    const renderedSegments = [...dialogueHtml.matchAll(/class="dialogue-time"/g)].length;
-    if (renderedSegments !== segments.length) {
-      failures.push("dist/replays/" + slug + "/dialogue/index.html: expected " + segments.length
-        + " dialogue links, found " + renderedSegments);
-    }
-    if (!dialogueHtml.includes('class="reading-mode-switch"')
-        || !dialogueHtml.includes('aria-current="page">詳細会話記録')) {
-      failures.push("dist/replays/" + slug + "/dialogue/index.html: dialogue mode not selected");
-    }
-    if (!dialogueHtml.includes("情報量を落とさないための収録方針")) {
-      failures.push("dist/replays/" + slug + "/dialogue/index.html: retention policy missing");
-    }
-    for (const match of dialogueHtml.matchAll(/<a class="dialogue-time"([^>]+)>/g)) {
-      if (!new RegExp('href="https://www\\.youtube\\.com/watch\\?v=' + work.videoId + '&amp;t=\\d+s"').test(match[1])) {
-        failures.push("dist/replays/" + slug + "/dialogue/index.html: invalid dialogue timestamp URL");
-        break;
-      }
-      if (!match[1].includes('target="_blank"') || !match[1].includes('rel="noreferrer"')) {
-        failures.push("dist/replays/" + slug + "/dialogue/index.html: unsafe dialogue link");
-        break;
-      }
-    }
-  }
+const actualHtmlPages = listHtmlFiles(path.join(root, "dist"))
+  .map((file) => path.relative(root, file))
+  .sort();
+if (actualHtmlPages.join("\n") !== [...pages].sort().join("\n")) {
+  failures.push("dist: expected exactly " + pages.length + " public HTML pages, found " + actualHtmlPages.length);
 }
 
 for (const file of pages) {
@@ -196,21 +273,30 @@ for (const file of pages) {
     if (description.includes(phrase)) failures.push(file + ": spoiler-prone phrase in description: " + phrase);
   }
   if (file === "dist/index.html") {
+    if (html.includes("詳細会話記録")) failures.push(file + ": obsolete transcript copy remains");
     for (const phrase of spoilerPronePromotionalPhrases) {
       if (html.includes(phrase)) failures.push(file + ": spoiler-prone promotional phrase: " + phrase);
     }
-    const cardDescriptions = [...html.matchAll(/<p class="lead">([^<]+)<\/p>/g)].map((match) => match[1]);
+    const cardDescriptions = [...html.matchAll(/<p class="lead">([^<]+)<\/p>/gu)].map((match) => match[1]);
     if (cardDescriptions.length !== slugs.length) failures.push(file + ": unexpected work card description count");
     if (cardDescriptions.some((value) => value !== neutralCardDescription)) {
       failures.push(file + ": work card descriptions must remain content-neutral");
     }
   }
 }
+
 for (const asset of ["dist/assets/styles.css", "dist/assets/app.js", "dist/.nojekyll"]) {
   if (!fs.existsSync(path.join(root, asset))) failures.push(asset + ": missing");
 }
+const cssPath = path.join(root, "dist", "assets", "styles.css");
+if (fs.existsSync(cssPath)
+    && /reading-mode-switch|dialogue-record|dialogue-segment|dialogue-speaker/u.test(fs.readFileSync(cssPath, "utf8"))) {
+  failures.push("dist/assets/styles.css: obsolete transcript styles remain");
+}
+
 if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Validated " + pages.length + " HTML pages and shared assets");
+console.log("Validated " + pages.length + " novel pages, " + overlayCount
+  + " dialogue-rich chapter overlays, internal speech sources, and shared assets");

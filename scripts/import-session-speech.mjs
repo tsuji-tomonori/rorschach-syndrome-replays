@@ -6,7 +6,7 @@ import { works } from "./works.mjs";
 
 const root = process.cwd();
 const sourceDirectory = path.resolve(process.argv[2] || "transcripts");
-const outputDirectory = path.join(root, "content", "dialogue");
+const outputDirectory = path.join(root, "sources", "session-speech");
 
 const nonSpeech = /\[(?:音楽|笑い|拍手|咳|咳払い|鼻息|叫び声|歓声|ため息|息をのむ音|うめき声|無音|効果音)\]/gu;
 
@@ -96,7 +96,7 @@ for (const work of works) {
     if (!match) continue;
     metrics.sourceSegments += 1;
     const seconds = parseTimestamp(match[1]);
-    if (seconds === null || seconds < start || seconds >= work.dialogueEnd) {
+    if (seconds === null || seconds < start || seconds >= work.sessionEnd) {
       metrics.outsideStoryRange += 1;
       continue;
     }
@@ -123,7 +123,7 @@ for (const work of works) {
       url: "https://www.youtube.com/watch?v=" + work.videoId,
       sha256: crypto.createHash("sha256").update(source).digest("hex")
     },
-    range: { start, end: work.dialogueEnd },
+    range: { start, end: work.sessionEnd },
     metrics: { ...metrics, retainedSegments: segments.length },
     segments
   };
