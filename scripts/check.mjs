@@ -24,6 +24,25 @@ const spoilerPronePromotionalPhrases = [
   "反復の核心",
   "命を預ける"
 ];
+const spoilerProneCharacterPhrases = [
+  ...spoilerPronePromotionalPhrases,
+  "同じ時間",
+  "犠牲にする答え",
+  "友人の孤独",
+  "皆が自由で",
+  "祠で願った言葉",
+  "自分の痛みを隠して",
+  "命と自由をめぐる",
+  "一人で選ぼうとした",
+  "レイを帰す道",
+  "三人の帰路",
+  "何度も同じ恐怖",
+  "彼女を失いたくない",
+  "無傷で帰す",
+  "ナナの言葉の揺れ",
+  "その素性と願い",
+  "真実を伏せたまま"
+];
 const expectedOverlays = {
   ayumiya: { "03.md": "第三章", "04.md": "第四章", "05.md": "第五章" },
   eclaire: {
@@ -71,6 +90,10 @@ function dialogueCount(markdown) {
   return [...markdown.matchAll(/^「/gmu)].length;
 }
 
+function extractCharacterIntroduction(markdown) {
+  return markdown.match(/^### 登場人物\s*\n([\s\S]*?)(?=^---$)/mu)?.[1]?.trim() || "";
+}
+
 function listHtmlFiles(directory) {
   if (!fs.existsSync(directory)) return [];
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -103,6 +126,15 @@ for (const work of works) {
   }
   if (/詳細会話記録|reading-mode-switch|dialogue-record|session-speech:start|セリフ統合検査/u.test(markdown)) {
     failures.push("content/" + work.file + ": obsolete transcript or generated-weave content remains");
+  }
+  const characterIntroduction = extractCharacterIntroduction(baseMarkdown);
+  if (!characterIntroduction) {
+    failures.push("content/" + work.file + ": character introduction missing");
+  }
+  for (const phrase of spoilerProneCharacterPhrases) {
+    if (characterIntroduction.includes(phrase)) {
+      failures.push("content/" + work.file + ": spoiler-prone phrase in character introduction: " + phrase);
+    }
   }
 
   const overlayDirectory = path.join(root, "content", "chapters", slug);
