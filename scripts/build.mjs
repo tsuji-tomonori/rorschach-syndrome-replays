@@ -13,63 +13,139 @@ const works = [
     file: "kikaken.md",
     label: "きかけんシャッハ",
     cast: "リリエル、ルルハリル、メイド",
-    accent: "#a43d4b"
+    accent: "#a43d4b",
+    videoId: "yvhap5mNTlU",
+    chapterStarts: {
+      "第一章": 1234,
+      "第二章": 2266,
+      "第三章": 2966,
+      "第四章": 3620,
+      "第五章": 4124,
+      "第六章": 5330,
+      "第七章": 6322,
+      "エピローグ": 6530
+    }
   },
   {
     slug: "yukiyama",
     file: "yukiyama.md",
     label: "ゆきやまシャッハ",
     cast: "山神カルタ、雪城眞尋",
-    accent: "#406b68"
+    accent: "#406b68",
+    videoId: "omlCoaZE440",
+    chapterStarts: {
+      "第一章": 970,
+      "第二章": 1529,
+      "第三章": 1866,
+      "第四章": 3166,
+      "第五章": 4067
+    }
   },
   {
     slug: "ririkaza",
     file: "ririkaza.md",
     label: "りりかざシャッハ",
     cast: "夕陽リリ、森中花咲、雪城眞尋",
-    accent: "#6b4b78"
+    accent: "#6b4b78",
+    videoId: "5dPj-Wzly58",
+    chapterStarts: {
+      "第一章": 1038,
+      "第二章": 1475,
+      "第三章": 2305,
+      "第四章": 3698,
+      "第五章": 4477
+    }
   },
   {
     slug: "ayumiya",
     file: "ayumiya.md",
     label: "あゆみやシャッハ",
     cast: "サヤ、スズリ、モモ",
-    accent: "#9a5b2e"
+    accent: "#9a5b2e",
+    videoId: "7Hvur1zdm_8",
+    chapterStarts: {
+      "第一章": 1264,
+      "第二章": 2093,
+      "第三章": 3402,
+      "第四章": 5752,
+      "第五章": 8533
+    }
   },
   {
     slug: "miratoto",
     file: "miratoto.md",
     label: "みらととシャッハ",
     cast: "ミラン・ケストレル、立伝都々、レイ",
-    accent: "#3f5d89"
+    accent: "#3f5d89",
+    videoId: "WkWxcTShiuk",
+    chapterStarts: {
+      "第一章": 1169,
+      "第二章": 1803,
+      "第三章": 2489,
+      "第四章": 5272,
+      "第五章": 8136
+    }
   },
   {
     slug: "rumufo",
     file: "rumufo.md",
     label: "るむふぉシャッハ",
     cast: "四季凪アキラ、セラフ・ダズルガーデン、ナナ",
-    accent: "#6e6a3d"
+    accent: "#6e6a3d",
+    videoId: "Fyo8TOprLw8",
+    chapterStarts: {
+      "第一章": 1637,
+      "第二章": 2420,
+      "第三章": 4290,
+      "第四章": 5599,
+      "第五章": 6900
+    }
   },
   {
     slug: "fukeizai",
     file: "fukeizai.md",
     label: "フ景罪シャッハ",
     cast: "フミ、長尾景",
-    accent: "#765044"
+    accent: "#765044",
+    videoId: "yTvmvQlDokc",
+    chapterStarts: {
+      "第一章": 1179,
+      "第二章": 1552,
+      "第三章": 2730,
+      "第四章": 4060,
+      "第五章": 5160
+    }
   },
   {
     slug: "eriburi",
     file: "eriburi.md",
     label: "えりぶりシャッハ",
     cast: "一橋綾人、五木左京",
-    accent: "#3d6678"
+    accent: "#3d6678",
+    videoId: "mkgAN44Uv88",
+    chapterStarts: {
+      "第一章": 1086,
+      "第二章": 2053,
+      "第三章": 3467,
+      "第四章": 4465,
+      "エピローグ": 5244
+    }
   },
   {
     slug: "eclaire",
     file: "eclaire.md",
     label: "えくれあシャッハ",
     cast: "える、シスター・クレア、雪城眞尋",
-    accent: "#8a4f68"
+    accent: "#8a4f68",
+    videoId: "DgYRSVPK9Cc",
+    chapterStarts: {
+      "第一章": 1130,
+      "第二章": 1754,
+      "第三章": 2568,
+      "第四章": 3886,
+      "第五章": 6022,
+      "エピローグ": 6671
+    }
   }
 ];
 
@@ -99,9 +175,23 @@ function slugify(text, seen) {
   return count ? candidate + "-" + (count + 1) : candidate;
 }
 
-function renderMarkdown(markdown) {
+function formatTimestamp(totalSeconds) {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return hours
+    ? hours + ":" + String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0")
+    : minutes + ":" + String(seconds).padStart(2, "0");
+}
+
+function timestampUrl(videoId, seconds) {
+  return "https://www.youtube.com/watch?v=" + videoId + "&t=" + seconds + "s";
+}
+
+function renderMarkdown(markdown, work) {
   const toc = [];
   const seen = new Map();
+  const unusedChapterStarts = new Set(Object.keys(work.chapterStarts));
   const marked = new Marked({
     gfm: true,
     breaks: false,
@@ -112,8 +202,25 @@ function renderMarkdown(markdown) {
         const id = slugify(plain, seen);
         const isChapter = /^(?:第[一二三四五六七八九十百0-9]+章|序章|終章|エピローグ)$/.test(plain);
         const isCast = depth === 3 && plain === "登場人物";
-        if ((depth === 2 && isChapter) || isCast) toc.push({ depth, text: plain, id });
-        return "<h" + depth + ' id="' + id + '">' + inner
+        let chapterVideo = "";
+        let seconds;
+        if (depth === 2 && isChapter) {
+          seconds = work.chapterStarts[plain];
+          if (!Number.isInteger(seconds) || seconds < 0) {
+            throw new Error(work.slug + ": chapter timestamp missing for " + plain);
+          }
+          unusedChapterStarts.delete(plain);
+          const timestamp = formatTimestamp(seconds);
+          const href = escapeHtml(timestampUrl(work.videoId, seconds));
+          chapterVideo = '<a class="chapter-video-link" href="' + href
+            + '" target="_blank" rel="noreferrer" aria-label="' + escapeHtml(plain)
+            + 'を動画の' + timestamp + 'から見る"><span aria-hidden="true">▶</span>'
+            + '<span>動画で見る</span><time datetime="PT' + seconds + 'S">' + timestamp + "</time></a>";
+        }
+        if ((depth === 2 && isChapter) || isCast) toc.push({ depth, text: plain, id, seconds });
+        return "<h" + depth + ' id="' + id + '"' + (chapterVideo ? ' class="chapter-heading"' : "") + '>'
+          + (chapterVideo ? '<span class="chapter-title">' + inner + "</span>" : inner)
+          + chapterVideo
           + '<a class="heading-anchor" href="#' + id + '" aria-label="'
           + escapeHtml(plain) + 'へのリンク">#</a></h' + depth + ">";
       },
@@ -127,7 +234,12 @@ function renderMarkdown(markdown) {
       }
     }
   });
-  return { html: marked.parse(markdown), toc };
+  const html = marked.parse(markdown);
+  if (unusedChapterStarts.size) {
+    throw new Error(work.slug + ": chapter timestamp has no matching heading: "
+      + [...unusedChapterStarts].join(", "));
+  }
+  return { html, toc };
 }
 
 function shell(options) {
@@ -212,8 +324,14 @@ function readerPage(work, index, rendered) {
   const previous = works[(index - 1 + works.length) % works.length];
   const next = works[(index + 1) % works.length];
   const toc = rendered.toc.map((item) => {
-    return '<li class="toc-depth-' + item.depth + '"><a href="#' + item.id + '">'
-      + escapeHtml(item.text) + "</a></li>";
+    const videoLink = Number.isInteger(item.seconds)
+      ? '<a class="toc-video-link" href="' + escapeHtml(timestampUrl(work.videoId, item.seconds))
+        + '" target="_blank" rel="noreferrer" aria-label="' + escapeHtml(item.text)
+        + 'を動画の' + formatTimestamp(item.seconds) + 'から見る"><span aria-hidden="true">▶</span>'
+        + formatTimestamp(item.seconds) + "</a>"
+      : "";
+    return '<li class="toc-depth-' + item.depth + '"><a class="toc-section-link" href="#' + item.id + '">'
+      + escapeHtml(item.text) + "</a>" + videoLink + "</li>";
   }).join("");
   const body = [
     '<div class="reading-progress" data-progress aria-hidden="true"></div>',
@@ -250,7 +368,7 @@ fs.writeFileSync(path.join(out, "index.html"), homePage());
 for (const [index, work] of works.entries()) {
   const markdown = fs.readFileSync(path.join(root, "content", work.file), "utf8");
   const publicMarkdown = markdown.replace(/\n#{2,6} 照合記録[\s\S]*$/, "");
-  const rendered = renderMarkdown(publicMarkdown);
+  const rendered = renderMarkdown(publicMarkdown, work);
   const directory = path.join(out, "replays", work.slug);
   fs.mkdirSync(directory, { recursive: true });
   fs.writeFileSync(path.join(directory, "index.html"), readerPage(work, index, rendered));

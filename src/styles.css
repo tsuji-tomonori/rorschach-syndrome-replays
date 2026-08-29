@@ -486,6 +486,10 @@ button {
 }
 
 .reader-toc li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
   margin: 0.55rem 0;
 }
 
@@ -504,6 +508,27 @@ button {
 .reader-toc a:hover,
 .reader-toc a[aria-current="true"] {
   color: var(--accent);
+}
+
+.reader-toc .toc-section-link {
+  min-width: 0;
+}
+
+.reader-toc .toc-video-link {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--accent);
+  font-family: ui-monospace, monospace;
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.reader-toc .toc-video-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
 .reader-toc .back-link {
@@ -577,6 +602,44 @@ button {
   border-radius: 62% 38% 55% 45% / 42% 58% 42% 58%;
   background: var(--accent);
   content: "";
+}
+
+.novel .chapter-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem 1rem;
+}
+
+.chapter-title {
+  min-width: 0;
+  margin-right: auto;
+}
+
+.novel .chapter-video-link {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--line));
+  border-radius: 999px;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.38em;
+  font-weight: 600;
+  letter-spacing: 0.035em;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.novel .chapter-video-link:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.chapter-video-link time {
+  font-family: ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 .novel h3 {
@@ -830,6 +893,19 @@ button {
 
   .novel h2 {
     margin-top: 6.5rem;
+  }
+
+  .novel .chapter-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .chapter-title {
+    flex: 1 0 100%;
+  }
+
+  .novel .chapter-video-link {
+    font-size: 0.45em;
   }
 
   .novel blockquote {
