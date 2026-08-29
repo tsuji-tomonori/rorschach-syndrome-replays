@@ -6,7 +6,7 @@ export const works = [
     cast: "リリエル、ルルハリル、メイド",
     accent: "#a43d4b",
     videoId: "yvhap5mNTlU",
-    dialogueEnd: 6984,
+    sessionEnd: 6984,
     chapterStarts: {
       "第一章": 1234,
       "第二章": 2266,
@@ -25,7 +25,7 @@ export const works = [
     cast: "山神カルタ、雪城眞尋",
     accent: "#406b68",
     videoId: "omlCoaZE440",
-    dialogueEnd: 4662,
+    sessionEnd: 4662,
     chapterStarts: {
       "第一章": 970,
       "第二章": 1529,
@@ -41,7 +41,7 @@ export const works = [
     cast: "夕陽リリ、森中花咲、雪城眞尋",
     accent: "#6b4b78",
     videoId: "5dPj-Wzly58",
-    dialogueEnd: 5241,
+    sessionEnd: 5241,
     chapterStarts: {
       "第一章": 1038,
       "第二章": 1475,
@@ -57,7 +57,7 @@ export const works = [
     cast: "サヤ、スズリ、モモ",
     accent: "#9a5b2e",
     videoId: "7Hvur1zdm_8",
-    dialogueEnd: 9740,
+    sessionEnd: 9740,
     chapterStarts: {
       "第一章": 1264,
       "第二章": 2093,
@@ -73,7 +73,7 @@ export const works = [
     cast: "ミラン・ケストレル、立伝都々、レイ",
     accent: "#3f5d89",
     videoId: "WkWxcTShiuk",
-    dialogueEnd: 9349,
+    sessionEnd: 9349,
     chapterStarts: {
       "第一章": 1169,
       "第二章": 1803,
@@ -89,7 +89,7 @@ export const works = [
     cast: "四季凪アキラ、セラフ・ダズルガーデン、ナナ",
     accent: "#6e6a3d",
     videoId: "Fyo8TOprLw8",
-    dialogueEnd: 7744,
+    sessionEnd: 7744,
     chapterStarts: {
       "第一章": 1637,
       "第二章": 2420,
@@ -105,7 +105,7 @@ export const works = [
     cast: "フミ、長尾景",
     accent: "#765044",
     videoId: "yTvmvQlDokc",
-    dialogueEnd: 5972,
+    sessionEnd: 5972,
     chapterStarts: {
       "第一章": 1179,
       "第二章": 1552,
@@ -121,7 +121,7 @@ export const works = [
     cast: "一橋綾人、五木左京",
     accent: "#3d6678",
     videoId: "mkgAN44Uv88",
-    dialogueEnd: 5719,
+    sessionEnd: 5719,
     chapterStarts: {
       "第一章": 1086,
       "第二章": 2053,
@@ -137,7 +137,7 @@ export const works = [
     cast: "える、シスター・クレア、雪城眞尋",
     accent: "#8a4f68",
     videoId: "DgYRSVPK9Cc",
-    dialogueEnd: 7039,
+    sessionEnd: 7039,
     chapterStarts: {
       "第一章": 1130,
       "第二章": 1754,
