@@ -1,0 +1,94 @@
+name: Dialogue transcription probe
+
+on:
+  push:
+    branches:
+      - content/preserve-dialogue
+    paths:
+      - .github/workflows/dialogue-transcription.yml
+
+permissions:
+  contents: read
+
+jobs:
+  transcribe-eclaire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install transcription tools
+        run: |
+          python -m pip install --disable-pip-version-check yt-dlp faster-whisper
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+
+      - name: Download gameplay audio
+        run: |
+          mkdir -p transcript
+          yt-dlp \
+            --no-playlist \
+            --js-runtimes node \
+            --download-sections "*16:55-inf" \
+            --force-keyframes-at-cuts \
+            --extract-audio \
+            --audio-format wav \
+            --audio-quality 5 \
+            --output "transcript/eclaire.%(ext)s" \
+            "https://www.youtube.com/watch?v=DgYRSVPK9Cc"
+
+      - name: Transcribe Japanese dialogue
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from faster_whisper import WhisperModel
+
+          audio = next(Path("transcript").glob("eclaire.*"))
+          model = WhisperModel("small", device="cpu", compute_type="int8")
+          segments, info = model.transcribe(
+              str(audio),
+              language="ja",
+              beam_size=5,
+              vad_filter=True,
+              condition_on_previous_text=True,
+              initial_prompt=(
+                  "エモクロアTRPG、ロールシャッハシンドローム。"
+                  "出演者は、える、シスター・クレア、雪城眞尋。"
+                  "発話を省略せず、固有名詞と会話の順序を保つ。"
+              ),
+          )
+          rows = [
+              {"start": round(segment.start + 1015, 3),
+               "end": round(segment.end + 1015, 3),
+               "text": segment.text.strip()}
+              for segment in segments
+              if segment.text.strip()
+          ]
+          Path("transcript/eclaire.json").write_text(
+              json.dumps(
+                  {
+                      "video_id": "DgYRSVPK9Cc",
+                      "language": info.language,
+                      "language_probability": info.language_probability,
+                      "segments": rows,
+                  },
+                  ensure_ascii=False,
+                  indent=2,
+              ),
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Upload transcript
+        uses: actions/upload-artifact@v4
+        with:
+          name: eclaire-transcript
+          path: transcript/eclaire.json
+          if-no-files-found: error
+          retention-days: 1
