@@ -1,10 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
+import { works } from "./works.mjs";
 
 const root = process.cwd();
-const slugs = ["kikaken", "yukiyama", "ririkaza", "ayumiya", "miratoto", "rumufo", "fukeizai", "eriburi", "eclaire"];
+const slugs = works.map((work) => work.slug);
 const failures = [];
-const pages = ["dist/index.html", ...slugs.map((slug) => "dist/replays/" + slug + "/index.html")];
+const pages = [
+  "dist/index.html",
+  ...slugs.map((slug) => "dist/replays/" + slug + "/index.html"),
+  ...slugs.map((slug) => "dist/replays/" + slug + "/dialogue/index.html")
+];
 const chapterHeading = /^(?:第[一二三四五六七八九十百0-9]+章|序章|終章|エピローグ)$/;
 const neutralCardDescription = "配信セッションをもとに構成したリプレイ小説。";
 const spoilerPronePromotionalPhrases = [
@@ -20,7 +25,17 @@ const spoilerPronePromotionalPhrases = [
   "命を預ける"
 ];
 
-for (const slug of slugs) {
+function formatTimestamp(totalSeconds) {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return hours
+    ? hours + ":" + String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0")
+    : minutes + ":" + String(seconds).padStart(2, "0");
+}
+
+for (const work of works) {
+  const { slug } = work;
   const markdownPath = path.join(root, "content", slug + ".md");
   const markdown = fs.readFileSync(markdownPath, "utf8");
   let chapterCount = 0;
@@ -36,6 +51,9 @@ for (const slug of slugs) {
   const htmlPath = path.join(root, "dist/replays", slug, "index.html");
   if (fs.existsSync(htmlPath)) {
     const html = fs.readFileSync(htmlPath, "utf8");
+    if (!html.includes('class="reading-mode-switch"') || !html.includes("詳細会話記録")) {
+      failures.push("dist/replays/" + slug + "/index.html: dialogue view switch missing");
+    }
     const chapterLinks = [...html.matchAll(/class="chapter-video-link"/g)].length;
     const tocVideoLinks = [...html.matchAll(/class="toc-video-link"/g)].length;
     if (chapterLinks !== chapterCount) {
@@ -63,6 +81,93 @@ for (const slug of slugs) {
       }
       if (!match[1].includes('target="_blank"') || !match[1].includes('rel="noreferrer"')) {
         failures.push("dist/replays/" + slug + "/index.html: unsafe external chapter link");
+      }
+    }
+  }
+
+  const dialoguePath = path.join(root, "content", "dialogue", slug + ".json");
+  if (!fs.existsSync(dialoguePath)) {
+    failures.push("content/dialogue/" + slug + ".json: missing");
+    continue;
+  }
+  const dialogue = JSON.parse(fs.readFileSync(dialoguePath, "utf8"));
+  const expectedStart = Math.min(...Object.values(work.chapterStarts));
+  if (dialogue.version !== 1) failures.push("content/dialogue/" + slug + ".json: unsupported version");
+  if (dialogue.slug !== slug) failures.push("content/dialogue/" + slug + ".json: slug mismatch");
+  if (dialogue.videoId !== work.videoId) failures.push("content/dialogue/" + slug + ".json: video ID mismatch");
+  if (dialogue.range?.start !== expectedStart || dialogue.range?.end !== work.dialogueEnd) {
+    failures.push("content/dialogue/" + slug + ".json: story range mismatch");
+  }
+  if (dialogue.source?.type !== "youtube-auto-captions"
+      || !/^[a-f0-9]{64}$/.test(dialogue.source?.sha256 || "")) {
+    failures.push("content/dialogue/" + slug + ".json: source traceability missing");
+  }
+  const segments = dialogue.segments || [];
+  if (segments.length !== dialogue.metrics?.retainedSegments || segments.length < 300) {
+    failures.push("content/dialogue/" + slug + ".json: retained dialogue count is unexpectedly low");
+  }
+  const accounted = (dialogue.metrics?.outsideStoryRange || 0)
+    + (dialogue.metrics?.nonSpeechOnly || 0)
+    + (dialogue.metrics?.exactDuplicates || 0)
+    + segments.length;
+  if (accounted !== dialogue.metrics?.sourceSegments) {
+    failures.push("content/dialogue/" + slug + ".json: source segment accounting mismatch");
+  }
+  for (const [index, segment] of segments.entries()) {
+    if (!Number.isInteger(segment.seconds)
+        || segment.seconds < expectedStart
+        || segment.seconds >= work.dialogueEnd) {
+      failures.push("content/dialogue/" + slug + ".json: segment outside story range at " + index);
+      break;
+    }
+    if (index > 0 && segment.seconds < segments[index - 1].seconds) {
+      failures.push("content/dialogue/" + slug + ".json: segments are not chronological");
+      break;
+    }
+    if (segment.timestamp !== formatTimestamp(segment.seconds)) {
+      failures.push("content/dialogue/" + slug + ".json: timestamp mismatch at " + index);
+      break;
+    }
+    if (!segment.text?.trim() || /\[(?:音楽|笑い|拍手|咳|咳払い|鼻息|叫び声|歓声|ため息|息をのむ音|うめき声|無音|効果音)\]/u.test(segment.text)) {
+      failures.push("content/dialogue/" + slug + ".json: empty or non-speech segment at " + index);
+      break;
+    }
+    if (index > 0 && segment.text === segments[index - 1].text) {
+      failures.push("content/dialogue/" + slug + ".json: consecutive duplicate at " + index);
+      break;
+    }
+  }
+  const chapterEntries = Object.entries(work.chapterStarts);
+  for (const [index, [title, start]] of chapterEntries.entries()) {
+    const end = chapterEntries[index + 1]?.[1] ?? work.dialogueEnd;
+    if (!segments.some((segment) => segment.seconds >= start && segment.seconds < end)) {
+      failures.push("content/dialogue/" + slug + ".json: no dialogue retained for " + title);
+    }
+  }
+
+  const dialogueHtmlPath = path.join(root, "dist", "replays", slug, "dialogue", "index.html");
+  if (fs.existsSync(dialogueHtmlPath)) {
+    const dialogueHtml = fs.readFileSync(dialogueHtmlPath, "utf8");
+    const renderedSegments = [...dialogueHtml.matchAll(/class="dialogue-time"/g)].length;
+    if (renderedSegments !== segments.length) {
+      failures.push("dist/replays/" + slug + "/dialogue/index.html: expected " + segments.length
+        + " dialogue links, found " + renderedSegments);
+    }
+    if (!dialogueHtml.includes('class="reading-mode-switch"')
+        || !dialogueHtml.includes('aria-current="page">詳細会話記録')) {
+      failures.push("dist/replays/" + slug + "/dialogue/index.html: dialogue mode not selected");
+    }
+    if (!dialogueHtml.includes("情報量を落とさないための収録方針")) {
+      failures.push("dist/replays/" + slug + "/dialogue/index.html: retention policy missing");
+    }
+    for (const match of dialogueHtml.matchAll(/<a class="dialogue-time"([^>]+)>/g)) {
+      if (!new RegExp('href="https://www\\.youtube\\.com/watch\\?v=' + work.videoId + '&amp;t=\\d+s"').test(match[1])) {
+        failures.push("dist/replays/" + slug + "/dialogue/index.html: invalid dialogue timestamp URL");
+        break;
+      }
+      if (!match[1].includes('target="_blank"') || !match[1].includes('rel="noreferrer"')) {
+        failures.push("dist/replays/" + slug + "/dialogue/index.html: unsafe dialogue link");
+        break;
       }
     }
   }

@@ -1,153 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { Marked } from "marked";
+import { works } from "./works.mjs";
 
 const root = process.cwd();
 const out = path.join(root, "dist");
 const base = "/";
 const workDescription = "配信セッションをもとに構成したリプレイ小説。";
-
-const works = [
-  {
-    slug: "kikaken",
-    file: "kikaken.md",
-    label: "きかけんシャッハ",
-    cast: "リリエル、ルルハリル、メイド",
-    accent: "#a43d4b",
-    videoId: "yvhap5mNTlU",
-    chapterStarts: {
-      "第一章": 1234,
-      "第二章": 2266,
-      "第三章": 2966,
-      "第四章": 3620,
-      "第五章": 4124,
-      "第六章": 5330,
-      "第七章": 6322,
-      "エピローグ": 6530
-    }
-  },
-  {
-    slug: "yukiyama",
-    file: "yukiyama.md",
-    label: "ゆきやまシャッハ",
-    cast: "山神カルタ、雪城眞尋",
-    accent: "#406b68",
-    videoId: "omlCoaZE440",
-    chapterStarts: {
-      "第一章": 970,
-      "第二章": 1529,
-      "第三章": 1866,
-      "第四章": 3166,
-      "第五章": 4067
-    }
-  },
-  {
-    slug: "ririkaza",
-    file: "ririkaza.md",
-    label: "りりかざシャッハ",
-    cast: "夕陽リリ、森中花咲、雪城眞尋",
-    accent: "#6b4b78",
-    videoId: "5dPj-Wzly58",
-    chapterStarts: {
-      "第一章": 1038,
-      "第二章": 1475,
-      "第三章": 2305,
-      "第四章": 3698,
-      "第五章": 4477
-    }
-  },
-  {
-    slug: "ayumiya",
-    file: "ayumiya.md",
-    label: "あゆみやシャッハ",
-    cast: "サヤ、スズリ、モモ",
-    accent: "#9a5b2e",
-    videoId: "7Hvur1zdm_8",
-    chapterStarts: {
-      "第一章": 1264,
-      "第二章": 2093,
-      "第三章": 3402,
-      "第四章": 5752,
-      "第五章": 8533
-    }
-  },
-  {
-    slug: "miratoto",
-    file: "miratoto.md",
-    label: "みらととシャッハ",
-    cast: "ミラン・ケストレル、立伝都々、レイ",
-    accent: "#3f5d89",
-    videoId: "WkWxcTShiuk",
-    chapterStarts: {
-      "第一章": 1169,
-      "第二章": 1803,
-      "第三章": 2489,
-      "第四章": 5272,
-      "第五章": 8136
-    }
-  },
-  {
-    slug: "rumufo",
-    file: "rumufo.md",
-    label: "るむふぉシャッハ",
-    cast: "四季凪アキラ、セラフ・ダズルガーデン、ナナ",
-    accent: "#6e6a3d",
-    videoId: "Fyo8TOprLw8",
-    chapterStarts: {
-      "第一章": 1637,
-      "第二章": 2420,
-      "第三章": 4290,
-      "第四章": 5599,
-      "第五章": 6900
-    }
-  },
-  {
-    slug: "fukeizai",
-    file: "fukeizai.md",
-    label: "フ景罪シャッハ",
-    cast: "フミ、長尾景",
-    accent: "#765044",
-    videoId: "yTvmvQlDokc",
-    chapterStarts: {
-      "第一章": 1179,
-      "第二章": 1552,
-      "第三章": 2730,
-      "第四章": 4060,
-      "第五章": 5160
-    }
-  },
-  {
-    slug: "eriburi",
-    file: "eriburi.md",
-    label: "えりぶりシャッハ",
-    cast: "一橋綾人、五木左京",
-    accent: "#3d6678",
-    videoId: "mkgAN44Uv88",
-    chapterStarts: {
-      "第一章": 1086,
-      "第二章": 2053,
-      "第三章": 3467,
-      "第四章": 4465,
-      "エピローグ": 5244
-    }
-  },
-  {
-    slug: "eclaire",
-    file: "eclaire.md",
-    label: "えくれあシャッハ",
-    cast: "える、シスター・クレア、雪城眞尋",
-    accent: "#8a4f68",
-    videoId: "DgYRSVPK9Cc",
-    chapterStarts: {
-      "第一章": 1130,
-      "第二章": 1754,
-      "第三章": 2568,
-      "第四章": 3886,
-      "第五章": 6022,
-      "エピローグ": 6671
-    }
-  }
-];
 
 function escapeHtml(value = "") {
   return value
@@ -186,6 +45,28 @@ function formatTimestamp(totalSeconds) {
 
 function timestampUrl(videoId, seconds) {
   return "https://www.youtube.com/watch?v=" + videoId + "&t=" + seconds + "s";
+}
+
+function loadDialogue(work) {
+  const dialoguePath = path.join(root, "content", "dialogue", work.slug + ".json");
+  const document = JSON.parse(fs.readFileSync(dialoguePath, "utf8"));
+  if (document.slug !== work.slug || document.videoId !== work.videoId) {
+    throw new Error(work.slug + ": dialogue source does not match work catalog");
+  }
+  return document;
+}
+
+function groupDialogue(work, dialogue) {
+  const chapters = Object.entries(work.chapterStarts);
+  return chapters.map(([title, start], index) => {
+    const end = chapters[index + 1]?.[1] ?? work.dialogueEnd;
+    return {
+      title,
+      start,
+      end,
+      segments: dialogue.segments.filter((segment) => segment.seconds >= start && segment.seconds < end)
+    };
+  });
 }
 
 function renderMarkdown(markdown, work) {
@@ -301,14 +182,14 @@ function homePage() {
     '    <div class="hero-blot" aria-hidden="true"><i></i><i></i><i></i></div>',
     '    <p class="eyebrow">Emoklore TRPG replay collection</p>',
     "    <h1>九つのセッションを、<br><em>リプレイ小説</em>で読む。</h1>",
-    '    <p class="hero-copy">エモクロアTRPG『ロールシャッハシンドローム』。<br>配信セッションをもとに構成した九つのリプレイ小説。</p>',
+    '    <p class="hero-copy">エモクロアTRPG『ロールシャッハシンドローム』。<br>九つのリプレイ小説と、時刻付きの詳細会話記録。</p>',
     '    <a class="hero-cta" href="#works">作品を選ぶ <span aria-hidden="true">↓</span></a>',
     "  </section>",
     '  <section class="collection" id="works" aria-labelledby="works-title">',
     '    <div class="section-heading"><p class="eyebrow">Replay collection</p><h2 id="works-title">収録作品</h2><p>九つのセッションを、それぞれ一篇のリプレイ小説として収録しています。</p></div>',
     '    <div class="work-grid">' + works.map(card).join("") + "</div>",
     "  </section>",
-    '  <section class="about"><div><p class="eyebrow">About</p><h2>セッションの声を、<br>読み物の時間へ。</h2></div><p>実際のセッションで交わされたキャラクターの台詞を軸に、場面の空気や間、視線や心の動きを地の文として編み直したリプレイ小説集です。判定や進行上の会話は省き、読み物として続く形に整えています。</p></section>',
+    '  <section class="about"><div><p class="eyebrow">About</p><h2>セッションの声を、<br>読み物の時間へ。</h2></div><p>小説版では、実際のセッションで交わされた台詞を軸に、場面の空気や間、視線や心の動きを地の文として編み直しています。詳細会話記録では、物語開始からセッション終了までの発話を時刻順に残し、判定や進行上の会話を含めて元動画へ遡れます。</p></section>',
     "</main>",
     '<footer class="site-footer"><p>原作シナリオ：ディズム『ロールシャッハシンドローム』</p><p>Unofficial replay novel collection</p></footer>'
   ].join("\n");
@@ -320,7 +201,19 @@ function homePage() {
   });
 }
 
-function readerPage(work, index, rendered) {
+function readingModeSwitch(work, mode, segmentCount) {
+  const novelUrl = base + "replays/" + work.slug + "/";
+  const dialogueUrl = novelUrl + "dialogue/";
+  const novel = mode === "novel"
+    ? '<span aria-current="page">小説版</span>'
+    : '<a href="' + novelUrl + '">小説版</a>';
+  const dialogue = mode === "dialogue"
+    ? '<span aria-current="page">詳細会話記録 <small>' + segmentCount + "件</small></span>"
+    : '<a href="' + dialogueUrl + '">詳細会話記録 <small>' + segmentCount + "件</small></a>";
+  return '<nav class="reading-mode-switch" aria-label="表示内容">' + novel + dialogue + "</nav>";
+}
+
+function readerPage(work, index, rendered, dialogue) {
   const previous = works[(index - 1 + works.length) % works.length];
   const next = works[(index + 1) % works.length];
   const toc = rendered.toc.map((item) => {
@@ -348,6 +241,7 @@ function readerPage(work, index, rendered) {
     '  <aside class="reader-toc" id="reader-toc"><p class="eyebrow">Contents</p><h2>' + escapeHtml(work.label) + "</h2><ol>" + toc + '</ol><a class="back-link" href="' + base + '">← 作品一覧へ</a></aside>',
     '  <main id="main" class="novel-wrap">',
     '    <div class="novel-kicker"><span>' + String(index + 1).padStart(2, "0") + " / " + String(works.length).padStart(2, "0") + "</span><span>" + escapeHtml(work.label) + "</span></div>",
+    "    " + readingModeSwitch(work, "novel", dialogue.segments.length),
     '    <article class="novel" data-novel>' + rendered.html + "</article>",
     '    <nav class="story-nav" aria-label="作品間ナビゲーション"><a href="' + base + "replays/" + previous.slug + '/"><span>前の作品</span><strong>← ' + previous.label + '</strong></a><a href="' + base + "replays/" + next.slug + '/"><span>次の作品</span><strong>' + next.label + " →</strong></a></nav>",
     "  </main>",
@@ -362,6 +256,57 @@ function readerPage(work, index, rendered) {
   });
 }
 
+function dialoguePage(work, index, dialogue) {
+  const chapters = groupDialogue(work, dialogue);
+  const chapterNavigation = chapters.map((chapter, chapterIndex) => (
+    '<li><a href="#dialogue-chapter-' + (chapterIndex + 1) + '"><span>'
+    + escapeHtml(chapter.title) + "</span><small>" + chapter.segments.length + "件</small></a></li>"
+  )).join("");
+  const chapterSections = chapters.map((chapter, chapterIndex) => {
+    const entries = chapter.segments.map((segment, segmentIndex) => {
+      const itemId = "dialogue-" + (chapterIndex + 1) + "-" + (segmentIndex + 1);
+      return '<li id="' + itemId + '"><a class="dialogue-time" href="'
+        + escapeHtml(timestampUrl(work.videoId, segment.seconds))
+        + '" target="_blank" rel="noreferrer" aria-label="動画の' + escapeHtml(segment.timestamp)
+        + 'から確認する"><span aria-hidden="true">▶</span><time datetime="PT' + segment.seconds + 'S">'
+        + escapeHtml(segment.timestamp) + "</time></a><p>" + escapeHtml(segment.text) + "</p></li>";
+    }).join("");
+    return '<details class="dialogue-chapter" id="dialogue-chapter-' + (chapterIndex + 1) + '"'
+      + (chapterIndex === 0 ? " open" : "") + '><summary><span>' + escapeHtml(chapter.title)
+      + '</span><small><time datetime="PT' + chapter.start + 'S">' + formatTimestamp(chapter.start)
+      + '</time>から・' + chapter.segments.length + '件</small></summary><ol class="dialogue-list">'
+      + entries + "</ol></details>";
+  }).join("");
+  const body = [
+    '<header class="reader-header">',
+    '  <a class="brand" href="' + base + '"><span class="brand-mark" aria-hidden="true"></span><span>Replay Collection</span></a>',
+    '  <div class="reader-tools" aria-label="表示設定">',
+    '    <button type="button" data-font="down" aria-label="文字を小さくする">A−</button>',
+    '    <button type="button" data-font="up" aria-label="文字を大きくする">A＋</button>',
+    '    <button class="theme-toggle" type="button" data-theme-toggle aria-label="表示テーマを切り替える">◐</button>',
+    "  </div>",
+    "</header>",
+    '<main id="main" class="dialogue-wrap">',
+    '  <div class="novel-kicker"><span>' + String(index + 1).padStart(2, "0") + " / " + String(works.length).padStart(2, "0") + "</span><span>" + escapeHtml(work.label) + "</span></div>",
+    "  " + readingModeSwitch(work, "dialogue", dialogue.segments.length),
+    '  <header class="dialogue-intro"><p class="eyebrow">Detailed dialogue record</p><h1>'
+      + escapeHtml(work.label) + 'の詳細会話記録</h1><p>物語が始まってからセッション終了宣言の直前まで、時刻付き自動字幕から<strong>'
+      + dialogue.segments.length + "件</strong>の発話を収録しています。</p></header>",
+    '  <aside class="dialogue-policy" aria-label="収録方針"><strong>情報量を落とさないための収録方針</strong><p>音楽・笑い・拍手など、言葉ではない字幕だけを除外しています。噛みや言い直しを含む発話は原則として残し、明白な固有名詞の誤認識だけを補正しました。自動字幕由来の誤りが残る箇所は、各時刻から元動画で確認できます。</p></aside>',
+    '  <nav class="dialogue-chapter-nav" aria-label="章を選ぶ"><ol>' + chapterNavigation + "</ol></nav>",
+    '  <section class="dialogue-record" aria-label="時刻付き会話記録">' + chapterSections + "</section>",
+    '  <a class="dialogue-back" href="' + base + "replays/" + work.slug + '/">← 小説版へ戻る</a>',
+    "</main>"
+  ].join("\n");
+  return shell({
+    title: work.label + " 詳細会話記録｜ロールシャッハ・シンドローム",
+    description: work.label + "。配信内容をもとに生成AIを用いて制作した詳細会話記録。原作シナリオのネタバレを含みます。",
+    body,
+    pageClass: "dialogue-reader",
+    accent: work.accent
+  });
+}
+
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(path.join(out, "assets"), { recursive: true });
 fs.writeFileSync(path.join(out, "index.html"), homePage());
@@ -369,12 +314,16 @@ for (const [index, work] of works.entries()) {
   const markdown = fs.readFileSync(path.join(root, "content", work.file), "utf8");
   const publicMarkdown = markdown.replace(/\n#{2,6} 照合記録[\s\S]*$/, "");
   const rendered = renderMarkdown(publicMarkdown, work);
+  const dialogue = loadDialogue(work);
   const directory = path.join(out, "replays", work.slug);
   fs.mkdirSync(directory, { recursive: true });
-  fs.writeFileSync(path.join(directory, "index.html"), readerPage(work, index, rendered));
+  fs.writeFileSync(path.join(directory, "index.html"), readerPage(work, index, rendered, dialogue));
+  const dialogueDirectory = path.join(directory, "dialogue");
+  fs.mkdirSync(dialogueDirectory, { recursive: true });
+  fs.writeFileSync(path.join(dialogueDirectory, "index.html"), dialoguePage(work, index, dialogue));
 }
 for (const asset of ["styles.css", "app.js"]) {
   fs.copyFileSync(path.join(root, "src", asset), path.join(out, "assets", asset));
 }
 fs.writeFileSync(path.join(out, ".nojekyll"), "");
-console.log("Built " + (works.length + 1) + " pages in " + path.relative(root, out));
+console.log("Built " + (works.length * 2 + 1) + " pages in " + path.relative(root, out));
