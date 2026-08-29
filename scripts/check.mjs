@@ -6,6 +6,19 @@ const slugs = ["kikaken", "yukiyama", "ririkaza", "ayumiya", "miratoto", "rumufo
 const failures = [];
 const pages = ["dist/index.html", ...slugs.map((slug) => "dist/replays/" + slug + "/index.html")];
 const chapterHeading = /^(?:第[一二三四五六七八九十百0-9]+章|序章|終章|エピローグ)$/;
+const neutralCardDescription = "配信セッションをもとに構成したリプレイ小説。";
+const spoilerPronePromotionalPhrases = [
+  "繰り返す一日",
+  "同じ一日",
+  "同じ山",
+  "同じ祠",
+  "同じ厄難",
+  "一度きりでは終わらない",
+  "反復",
+  "時間の綻び",
+  "反復の核心",
+  "命を預ける"
+];
 
 for (const slug of slugs) {
   const markdownPath = path.join(root, "content", slug + ".md");
@@ -39,6 +52,19 @@ for (const file of pages) {
   const description = html.match(/<meta name="description" content="([^"]+)">/)?.[1] || "";
   if (!description.includes("生成AI")) failures.push(file + ": AI disclosure missing from description");
   if (!description.includes("ネタバレ")) failures.push(file + ": spoiler warning missing from description");
+  for (const phrase of spoilerPronePromotionalPhrases) {
+    if (description.includes(phrase)) failures.push(file + ": spoiler-prone phrase in description: " + phrase);
+  }
+  if (file === "dist/index.html") {
+    for (const phrase of spoilerPronePromotionalPhrases) {
+      if (html.includes(phrase)) failures.push(file + ": spoiler-prone promotional phrase: " + phrase);
+    }
+    const cardDescriptions = [...html.matchAll(/<p class="lead">([^<]+)<\/p>/g)].map((match) => match[1]);
+    if (cardDescriptions.length !== slugs.length) failures.push(file + ": unexpected work card description count");
+    if (cardDescriptions.some((value) => value !== neutralCardDescription)) {
+      failures.push(file + ": work card descriptions must remain content-neutral");
+    }
+  }
 }
 for (const asset of ["dist/assets/styles.css", "dist/assets/app.js", "dist/.nojekyll"]) {
   if (!fs.existsSync(path.join(root, asset))) failures.push(asset + ": missing");

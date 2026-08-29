@@ -5,6 +5,7 @@ import { Marked } from "marked";
 const root = process.cwd();
 const out = path.join(root, "dist");
 const base = "/";
+const workDescription = "配信セッションをもとに構成したリプレイ小説。";
 
 const works = [
   {
@@ -12,7 +13,6 @@ const works = [
     file: "kikaken.md",
     label: "きかけんシャッハ",
     cast: "リリエル、ルルハリル、メイド",
-    lead: "お嬢様と執事とメイド。穏やかなピクニックは、瞬きのたびに同じ一日へ戻っていく。",
     accent: "#a43d4b"
   },
   {
@@ -20,7 +20,6 @@ const works = [
     file: "yukiyama.md",
     label: "ゆきやまシャッハ",
     cast: "山神カルタ、雪城眞尋",
-    lead: "バレンタインの贈り物は山の景色。烏天狗と少女が辿る、一度きりでは終わらない山道。",
     accent: "#406b68"
   },
   {
@@ -28,7 +27,6 @@ const works = [
     file: "ririkaza.md",
     label: "りりかざシャッハ",
     cast: "夕陽リリ、森中花咲、雪城眞尋",
-    lead: "弁当とポテトチップスを携えた三人の山行。軽口の奥で、ひとりだけが反復を覚えている。",
     accent: "#6b4b78"
   },
   {
@@ -36,7 +34,6 @@ const works = [
     file: "ayumiya.md",
     label: "あゆみやシャッハ",
     cast: "サヤ、スズリ、モモ",
-    lead: "売れないアイドル三人組が挑む開運ロケ。山の静けさが、彼女たちの未来を試していく。",
     accent: "#9a5b2e"
   },
   {
@@ -44,7 +41,6 @@ const works = [
     file: "miratoto.md",
     label: "みらととシャッハ",
     cast: "ミラン・ケストレル、立伝都々、レイ",
-    lead: "病気の母を救う薬草を探して。何でも屋と依頼人は、山に隠された時間の綻びを追う。",
     accent: "#3f5d89"
   },
   {
@@ -52,7 +48,6 @@ const works = [
     file: "rumufo.md",
     label: "るむふぉシャッハ",
     cast: "四季凪アキラ、セラフ・ダズルガーデン、ナナ",
-    lead: "何でも屋の二人と方向音痴の依頼人。友達という言葉が、反復の核心で別の意味を帯びる。",
     accent: "#6e6a3d"
   },
   {
@@ -60,7 +55,6 @@ const works = [
     file: "fukeizai.md",
     label: "フ景罪シャッハ",
     cast: "フミ、長尾景",
-    lead: "神と人が任務で向かう山。尊大な軽口を交わしながら、二人は避けられない厄難に抗う。",
     accent: "#765044"
   },
   {
@@ -68,7 +62,6 @@ const works = [
     file: "eriburi.md",
     label: "えりぶりシャッハ",
     cast: "一橋綾人、五木左京",
-    lead: "珍しい茸を求める二人の山行。冗談めいた賭けは、互いの命を預ける同意へ姿を変える。",
     accent: "#3d6678"
   },
   {
@@ -76,7 +69,6 @@ const works = [
     file: "eclaire.md",
     label: "えくれあシャッハ",
     cast: "える、シスター・クレア、雪城眞尋",
-    lead: "手作り弁当を囲む三人のピクニック。皆の幸せを願う言葉が、反復の中で重みを増していく。",
     accent: "#8a4f68"
   }
 ];
@@ -179,7 +171,7 @@ function card(work, index) {
     '    <p class="eyebrow">Replay novel</p>',
     "    <h2>" + work.label + "</h2>",
     '    <p class="cast">' + work.cast + "</p>",
-    '    <p class="lead">' + work.lead + "</p>",
+    '    <p class="lead">' + workDescription + "</p>",
     '    <span class="read-link">作品を読む <span aria-hidden="true">→</span></span>',
     "  </a>",
     "</article>"
@@ -196,15 +188,15 @@ function homePage() {
     '  <section class="hero">',
     '    <div class="hero-blot" aria-hidden="true"><i></i><i></i><i></i></div>',
     '    <p class="eyebrow">Emoklore TRPG replay collection</p>',
-    "    <h1>繰り返す一日を、<br><em>九つの視点</em>で読む。</h1>",
-    '    <p class="hero-copy">エモクロアTRPG『ロールシャッハシンドローム』。<br>同じ山、同じ祠、同じ厄難から生まれた九つのリプレイ小説。</p>',
+    "    <h1>九つのセッションを、<br><em>リプレイ小説</em>で読む。</h1>",
+    '    <p class="hero-copy">エモクロアTRPG『ロールシャッハシンドローム』。<br>配信セッションをもとに構成した九つのリプレイ小説。</p>',
     '    <a class="hero-cta" href="#works">作品を選ぶ <span aria-hidden="true">↓</span></a>',
     "  </section>",
     '  <section class="collection" id="works" aria-labelledby="works-title">',
-    '    <div class="section-heading"><p class="eyebrow">Nine observations</p><h2 id="works-title">収録作品</h2><p>登場人物の関係性も、選ぶ言葉も、辿り着く余韻も異なる九篇です。</p></div>',
+    '    <div class="section-heading"><p class="eyebrow">Replay collection</p><h2 id="works-title">収録作品</h2><p>九つのセッションを、それぞれ一篇のリプレイ小説として収録しています。</p></div>',
     '    <div class="work-grid">' + works.map(card).join("") + "</div>",
     "  </section>",
-    '  <section class="about"><div><p class="eyebrow">About</p><h2>セッションの声を、<br>読み物の時間へ。</h2></div><p>実際のセッションで交わされたキャラクターの台詞を軸に、山の空気、沈黙の間、視線や心の揺れを地の文として編み直したリプレイ小説集です。判定や進行上の会話は省き、物語として続く読書体験に整えています。</p></section>',
+    '  <section class="about"><div><p class="eyebrow">About</p><h2>セッションの声を、<br>読み物の時間へ。</h2></div><p>実際のセッションで交わされたキャラクターの台詞を軸に、場面の空気や間、視線や心の動きを地の文として編み直したリプレイ小説集です。判定や進行上の会話は省き、読み物として続く形に整えています。</p></section>',
     "</main>",
     '<footer class="site-footer"><p>原作シナリオ：ディズム『ロールシャッハシンドローム』</p><p>Unofficial replay novel collection</p></footer>'
   ].join("\n");
@@ -245,7 +237,7 @@ function readerPage(work, index, rendered) {
   ].join("\n");
   return shell({
     title: work.label + "｜ロールシャッハ・シンドローム",
-    description: work.lead + " 生成AIを用いて制作した作品で、原作シナリオのネタバレを含みます。",
+    description: work.label + "。配信内容をもとに生成AIを用いて制作した、エモクロアTRPG『ロールシャッハシンドローム』のリプレイ小説。原作シナリオのネタバレを含みます。",
     body,
     pageClass: "reader",
     accent: work.accent
