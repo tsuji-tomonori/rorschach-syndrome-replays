@@ -23,12 +23,47 @@ const spoilerPronePromotionalPhrases = [
 for (const slug of slugs) {
   const markdownPath = path.join(root, "content", slug + ".md");
   const markdown = fs.readFileSync(markdownPath, "utf8");
+  let chapterCount = 0;
   for (const match of markdown.matchAll(/^## (.+)$/gm)) {
     if (!chapterHeading.test(match[1])) failures.push("content/" + slug + ".md: non-chapter ## heading: " + match[1]);
+    else chapterCount += 1;
   }
   for (const match of markdown.matchAll(/^### (.+)$/gm)) {
     if (match[1] !== "登場人物" && match[1] !== "照合記録") {
       failures.push("content/" + slug + ".md: spoiler-prone subheading: " + match[1]);
+    }
+  }
+  const htmlPath = path.join(root, "dist/replays", slug, "index.html");
+  if (fs.existsSync(htmlPath)) {
+    const html = fs.readFileSync(htmlPath, "utf8");
+    const chapterLinks = [...html.matchAll(/class="chapter-video-link"/g)].length;
+    const tocVideoLinks = [...html.matchAll(/class="toc-video-link"/g)].length;
+    if (chapterLinks !== chapterCount) {
+      failures.push("dist/replays/" + slug + "/index.html: expected " + chapterCount
+        + " chapter video links, found " + chapterLinks);
+    }
+    if (tocVideoLinks !== chapterCount) {
+      failures.push("dist/replays/" + slug + "/index.html: expected " + chapterCount
+        + " TOC video links, found " + tocVideoLinks);
+    }
+    const readTargets = [...html.matchAll(/<a class="chapter-video-link"[^>]*href="https:\/\/www\.youtube\.com\/watch\?v=([\w-]{11})&amp;t=(\d+)s"/g)]
+      .map((match) => match[1] + ":" + match[2]);
+    const tocTargets = [...html.matchAll(/<a class="toc-video-link"[^>]*href="https:\/\/www\.youtube\.com\/watch\?v=([\w-]{11})&amp;t=(\d+)s"/g)]
+      .map((match) => match[1] + ":" + match[2]);
+    if (readTargets.join(",") !== tocTargets.join(",")) {
+      failures.push("dist/replays/" + slug + "/index.html: reader and TOC timestamp links differ");
+    }
+    const startSeconds = readTargets.map((target) => Number(target.split(":")[1]));
+    if (startSeconds.some((seconds, index) => index > 0 && seconds <= startSeconds[index - 1])) {
+      failures.push("dist/replays/" + slug + "/index.html: chapter timestamps are not chronological");
+    }
+    for (const match of html.matchAll(/<a class="(?:chapter-video-link|toc-video-link)"([^>]+)>/g)) {
+      if (!/href="https:\/\/www\.youtube\.com\/watch\?v=[\w-]{11}&amp;t=\d+s"/.test(match[1])) {
+        failures.push("dist/replays/" + slug + "/index.html: invalid YouTube timestamp URL");
+      }
+      if (!match[1].includes('target="_blank"') || !match[1].includes('rel="noreferrer"')) {
+        failures.push("dist/replays/" + slug + "/index.html: unsafe external chapter link");
+      }
     }
   }
 }
