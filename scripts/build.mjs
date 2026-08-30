@@ -8,6 +8,7 @@ const root = process.cwd();
 const out = path.join(root, "dist");
 const base = "/";
 const workDescription = "配信セッションをもとに構成したリプレイ小説。";
+const robotsPolicy = "noindex, noarchive, nosnippet, noimageindex, max-snippet:0, max-image-preview:none, max-video-preview:0";
 
 function escapeHtml(value = "") {
   return value
@@ -115,6 +116,9 @@ function shell(options) {
     "<head>",
     '  <meta charset="utf-8">',
     '  <meta name="viewport" content="width=device-width, initial-scale=1">',
+    '  <meta name="robots" content="' + robotsPolicy + '">',
+    '  <meta name="googlebot" content="' + robotsPolicy + '">',
+    '  <meta name="bingbot" content="' + robotsPolicy + '">',
     '  <meta name="description" content="' + escapeHtml(options.description) + '">',
     '  <meta name="theme-color" content="#151312">',
     '  <meta property="og:title" content="' + escapeHtml(options.title) + '">',
@@ -237,4 +241,10 @@ for (const asset of ["styles.css", "app.js"]) {
   fs.copyFileSync(path.join(root, "src", asset), path.join(out, "assets", asset));
 }
 fs.writeFileSync(path.join(out, ".nojekyll"), "");
+fs.writeFileSync(path.join(out, "robots.txt"), [
+  "# Crawlers must be able to read each page's noindex directive.",
+  "User-agent: *",
+  "Allow: /",
+  ""
+].join("\n"));
 console.log("Built " + (works.length + 1) + " pages in " + path.relative(root, out));
