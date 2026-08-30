@@ -15,6 +15,8 @@
 
 https://rorschach.page.diopside.net/
 
+公開ページはネタバレ防止のため、検索結果へ登録しないよう `robots` / `googlebot` / `bingbot` の `noindex` 指示を出力します。`robots.txt` は検索ロボットが各ページの `noindex` を読み取れる状態に保ち、`npm run check` で全HTMLへの付与漏れを検査します。
+
 ## ローカル確認
 
 ~~~bash
