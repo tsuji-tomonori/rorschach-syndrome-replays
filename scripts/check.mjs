@@ -12,6 +12,7 @@ const pages = [
 ];
 const chapterHeading = /^(?:第[一二三四五六七八九十百0-9]+章|序章|終章|エピローグ)$/u;
 const neutralCardDescription = "配信セッションをもとに構成したリプレイ小説。";
+const robotsPolicy = "noindex, noarchive, nosnippet, noimageindex, max-snippet:0, max-image-preview:none, max-video-preview:0";
 const spoilerPronePromotionalPhrases = [
   "繰り返す一日",
   "同じ一日",
@@ -298,6 +299,10 @@ for (const file of pages) {
   if (!html.includes('class="site-notice"')) failures.push(file + ": site notice missing");
   if (!html.includes("生成AIを用いて制作")) failures.push(file + ": AI disclosure missing");
   if (!html.includes("ネタバレ注意")) failures.push(file + ": spoiler warning missing");
+  for (const crawler of ["robots", "googlebot", "bingbot"]) {
+    const directive = '<meta name="' + crawler + '" content="' + robotsPolicy + '">';
+    if (!html.includes(directive)) failures.push(file + ": " + crawler + " noindex directive missing");
+  }
   const description = html.match(/<meta name="description" content="([^"]+)">/)?.[1] || "";
   if (!description.includes("生成AI")) failures.push(file + ": AI disclosure missing from description");
   if (!description.includes("ネタバレ")) failures.push(file + ": spoiler warning missing from description");
@@ -317,8 +322,18 @@ for (const file of pages) {
   }
 }
 
-for (const asset of ["dist/assets/styles.css", "dist/assets/app.js", "dist/.nojekyll"]) {
+for (const asset of ["dist/assets/styles.css", "dist/assets/app.js", "dist/.nojekyll", "dist/robots.txt"]) {
   if (!fs.existsSync(path.join(root, asset))) failures.push(asset + ": missing");
+}
+const robotsPath = path.join(root, "dist", "robots.txt");
+if (fs.existsSync(robotsPath)) {
+  const robots = fs.readFileSync(robotsPath, "utf8");
+  if (!robots.includes("User-agent: *") || !robots.includes("Allow: /")) {
+    failures.push("dist/robots.txt: crawlers must be allowed to read page-level noindex directives");
+  }
+  if (/^Disallow:\s*\/$/mu.test(robots)) {
+    failures.push("dist/robots.txt: site-wide disallow would hide page-level noindex directives");
+  }
 }
 const cssPath = path.join(root, "dist", "assets", "styles.css");
 if (fs.existsSync(cssPath)
