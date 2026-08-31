@@ -2,7 +2,7 @@
 
 [![Deploy GitHub Pages](https://github.com/tsuji-tomonori/rorschach-syndrome-replays/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/tsuji-tomonori/rorschach-syndrome-replays/actions/workflows/deploy-pages.yml)
 
-エモクロアTRPG『ロールシャッハシンドローム』のセッションから構成した、9作品のリプレイ小説を読むための静的サイトです。
+エモクロアTRPG『ロールシャッハシンドローム』のセッションから構成した、10作品のリプレイ小説を読むための静的サイトです。
 
 各章の見出しと目次から、元になった配信の該当場面をタイムスタンプ付きで開けます。
 実際に交わされたセリフをできる限り本文へ残し、噛みや言い直しだけを読みやすく整えながら、地の文とともに一篇の小説へ編み込んでいます。
@@ -49,6 +49,12 @@ npx serve dist
 node scripts/import-session-speech.mjs /path/to/transcripts
 ~~~
 
+特定作品だけを取り込む場合は、第2引数に作品slugを指定します。
+
+~~~bash
+node scripts/import-session-speech.mjs /path/to/transcripts yoruneko
+~~~
+
 取り込んだ資料を章ごとに照合し、必要なセリフを人物の動作・視線・場面描写とともに `content/chapters/<作品>/<章>.md` へ手作業で編み込みます。自動字幕をそのまま本文へ流し込む処理や、公開用の文字起こしページは設けません。
 
 動画ID、収録範囲、発話数、時系列、非発話字幕の混入、章の差し替え、公開ページ数、タイムスタンプ付き動画リンクは `npm run check` で検証します。
@@ -64,5 +70,6 @@ node scripts/import-session-speech.mjs /path/to/transcripts
 - フ景罪シャッハ
 - えりぶりシャッハ
 - えくれあシャッハ
+- よるねこシャッハ
 
 原作シナリオ：ディズム『ロールシャッハシンドローム』
