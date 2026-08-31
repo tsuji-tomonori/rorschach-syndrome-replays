@@ -146,5 +146,22 @@ export const works = [
       "第五章": 6022,
       "エピローグ": 6671
     }
+  },
+  {
+    slug: "yoruneko",
+    file: "yoruneko.md",
+    label: "よるねこシャッハ",
+    cast: "猫屋敷美紅、夜牛詩乃、イツカ",
+    accent: "#5f527d",
+    videoId: "87prlAFCBk0",
+    sessionEnd: 8423,
+    chapterStarts: {
+      "第一章": 984,
+      "第二章": 3768,
+      "第三章": 4624,
+      "第四章": 5303,
+      "第五章": 7005,
+      "エピローグ": 8184
+    }
   }
 ];

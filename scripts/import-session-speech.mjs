@@ -6,6 +6,7 @@ import { works } from "./works.mjs";
 
 const root = process.cwd();
 const sourceDirectory = path.resolve(process.argv[2] || "transcripts");
+const selectedSlug = process.argv[3] || null;
 const outputDirectory = path.join(root, "sources", "session-speech");
 
 const nonSpeech = /\[(?:音楽|笑い|拍手|咳|咳払い|鼻息|叫び声|歓声|ため息|息をのむ音|うめき声|無音|効果音)\]/gu;
@@ -40,6 +41,13 @@ const corrections = {
   ],
   yukiyama: [
     [/山神かるた/gu, "山神カルタ"]
+  ],
+  yoruneko: [
+    [/猫屋敷ミク/gu, "猫屋敷美紅"],
+    [/野牛(?:し野|野)/gu, "夜牛詩乃"],
+    [/し野(?=さん|ちゃん|は|が|を|も|の|に|と|、|。|\s|$)/gu, "詩乃"],
+    [/ミク(?=さん|ちゃん|は|が|を|も|の|に|と|、|。|\s|$)/gu, "美紅"],
+    [/い(?:か|子)さん/gu, "イツカさん"]
   ]
 };
 
@@ -79,6 +87,7 @@ if (!fs.existsSync(sourceDirectory)) {
 fs.mkdirSync(outputDirectory, { recursive: true });
 
 for (const work of works) {
+  if (selectedSlug && work.slug !== selectedSlug) continue;
   const sourcePath = path.join(sourceDirectory, work.slug + ".txt");
   const source = fs.readFileSync(sourcePath, "utf8");
   const start = Math.min(...Object.values(work.chapterStarts));
